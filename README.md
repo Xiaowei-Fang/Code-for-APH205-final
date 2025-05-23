@@ -4,7 +4,6 @@ This repository contains R code for analyzing the relationship between perceived
 
 ## Project Description
 
-The R script (`qq.Rmd` or `qq.html` if rendered) performs the following main tasks:
 
 1.  **Data Loading and Cleaning:**
     *   Loads the dataset `APH205 Final Report Database.csv`.
@@ -29,7 +28,6 @@ The R script (`qq.Rmd` or `qq.html` if rendered) performs the following main tas
 
 ## Files
 
-*   `qq.Rmd` / `qq.html`: The R Markdown script containing all analysis code and (if rendered) the output.
 *   `APH205 Final Report Database.csv`: The dataset used for the analysis (ensure this file is in the correct path as specified in the script, e.g., "C:/Users/方小维/Desktop/APH205 Final Report Database.csv").
 
 ## How to Run
@@ -39,7 +37,7 @@ The R script (`qq.Rmd` or `qq.html` if rendered) performs the following main tas
     ```R
     install.packages(c("dplyr", "Hmisc", "knitr", "tidyr", "ggplot2", "broom"))
     ```
-3.  Open the `qq.Rmd` file in RStudio.
+3.  Open the `APH205_final.Rmd` file in RStudio.
 4.  Update the file path for `read.csv()` to point to the location of your `APH205 Final Report Database.csv` file.
 5.  Run the R chunks sequentially or "Knit" the R Markdown document to HTML to see the full output, including tables and plots.
 
