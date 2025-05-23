@@ -1,0 +1,248 @@
+---
+title: "aph205 final"
+author: "Xiaowei.fang 2255235"
+date: "2025-05-21"
+
+---
+导入库和数据集
+```{r}
+
+library(dplyr)
+library(Hmisc) # For rcorr for correlations with p-values
+library(knitr) # For kable tables
+library(tidyr) # For drop_na
+
+Data <- read.csv("C:/Users/方小维/Desktop/APH205 Final Report Database.csv", header=TRUE)
+summary(Data)
+```
+删除无关变量
+```{r}
+Data <- Data %>% select(-Ethnicity,-PHQ9_cat_BL,-PHQ9_cat_F4,-GAD7_cat_BL,-GAD7_cat_F4,-ISI_cat_BL,-ISI_cat_F4,-COVID19_impact_score,-ID,-Origin_cat,-Age_BL,-Sibling_BL,-Morbidity_P_BL,-Morbidity_S_BL)
+summary(Data)
+```
+删除异常值，缺失值
+```{r}
+
+Data_clean <- Data %>%
+  filter(!if_any(
+    c(COVID19_impact_dailylife, COVID19_impact_studypractice, 
+      COVID19_impact_familyincome, COVID19_impact_familyhealth, 
+      COVID19_impact_relationship),
+    ~ .x == 9  
+  ))
+Data_clean <- na.omit(Data_clean)
+summary(Data_clean)
+```
+因子化
+```{r}
+Data_clean$Sex <- factor(Data_clean$Sex, levels = c(1, 2), labels = c("Male", "Female"))
+Data_clean$Academic_Year <- factor(Data_clean$Academic_Year, levels = c(1, 2), labels = c("Year 1", "Year 2"))
+Data_clean$Academic_PLS_BL <- factor(Data_clean$Academic_PLS_BL, levels = c(1, 2, 3, 4, 5), 
+                             labels = c(">=90", "80-89", "70-79", "<70", "Unknown"), ordered = TRUE)
+str(Data_clean)
+```
+转化身高体重为BMI
+```{r}
+Data_clean <- Data_clean %>%
+  mutate(
+    Height_m_BL = Height_BL / 100,  
+    BMI_BL = Weight_BL / (Height_m_BL^2)
+  )
+
+Data_clean <- Data_clean %>%
+  select(-Height_BL, -Weight_BL, -Height_m_BL)
+print(summary(Data_clean$BMI_BL))
+```
+建立模型1
+```{r}
+lm_phq_individual_impacts <- lm(PHQ9_score_F4 ~ COVID19_impact_dailylife +
+                                                  COVID19_impact_studypractice +
+                                                  COVID19_impact_familyincome +
+                                                  COVID19_impact_familyhealth +
+                                                  COVID19_impact_relationship,
+                                data = Data_clean)
+summary_phq_individual <- summary(lm_phq_individual_impacts)
+
+lm_phq_individual_impacts_adj <- lm(PHQ9_score_F4 ~ COVID19_impact_dailylife +
+                                                      COVID19_impact_studypractice +
+                                                      COVID19_impact_familyincome +
+                                                      COVID19_impact_familyhealth +
+                                                      COVID19_impact_relationship +
+                                                      Sex + Academic_Year+BMI_BL+Academic_PLS_BL+PHQ9_score_BL+GAD7_score_BL+ ISI_score_BL,data = Data_clean)
+summary_phq_individual_adj <- summary(lm_phq_individual_impacts_adj)
+
+print("--- PHQ9_score_F4 with Individual Impacts ---")
+print(summary_phq_individual)
+print(summary_phq_individual_adj)
+```
+建立模型2
+```{r}
+lm_GAD7_individual_impacts <- lm(GAD7_score_F4 ~ COVID19_impact_dailylife +
+                                                  COVID19_impact_studypractice +
+                                                  COVID19_impact_familyincome +
+                                                  COVID19_impact_familyhealth +
+                                                  COVID19_impact_relationship,
+                                data = Data_clean)
+summary_GAD7_individual <- summary(lm_GAD7_individual_impacts)
+
+lm_GAD7_individual_impacts_adj <- lm(GAD7_score_F4 ~ COVID19_impact_dailylife +
+                                                      COVID19_impact_studypractice +
+                                                      COVID19_impact_familyincome +
+                                                      COVID19_impact_familyhealth +
+                                                      COVID19_impact_relationship +
+                                                      Sex + Academic_Year+BMI_BL+Academic_PLS_BL+PHQ9_score_BL+GAD7_score_BL+ ISI_score_BL, data = Data_clean)
+summary_GAD7_individual_adj <- summary(lm_GAD7_individual_impacts_adj)
+
+print("--- GAD7_score_F4 with Individual Impacts ---")
+print(summary_GAD7_individual)
+print(summary_GAD7_individual_adj)
+```
+建立模型3
+```{r}
+lm_ISI_individual_impacts <- lm(ISI_score_F4 ~ COVID19_impact_dailylife +
+                                                  COVID19_impact_studypractice +
+                                                  COVID19_impact_familyincome +
+                                                  COVID19_impact_familyhealth +
+                                                  COVID19_impact_relationship,
+                                data = Data_clean)
+summary_ISI_individual <- summary(lm_ISI_individual_impacts)
+
+lm_ISI_individual_impacts_adj <- lm(ISI_score_F4 ~ COVID19_impact_dailylife +
+                                                      COVID19_impact_studypractice +
+                                                      COVID19_impact_familyincome +
+                                                      COVID19_impact_familyhealth +
+                                                      COVID19_impact_relationship +
+                                                      Sex + Academic_Year+BMI_BL+Academic_PLS_BL+PHQ9_score_BL+GAD7_score_BL+ ISI_score_BL,data = Data_clean)
+summary_ISI_individual_adj <- summary(lm_ISI_individual_impacts_adj)
+
+print("--- ISI_score_F4 with Individual Impacts ---")
+print(summary_ISI_individual)
+print(summary_ISI_individual_adj)
+```
+各个模型的MAE
+```{r}
+pred_phq <- predict(lm_phq_individual_impacts_adj, newdata = Data_clean)
+pred_gad <- predict(lm_GAD7_individual_impacts_adj, newdata = Data_clean)
+pred_isi <- predict(lm_ISI_individual_impacts_adj, newdata = Data_clean)
+
+# Actual values
+actual_phq <- Data_clean$PHQ9_score_F4
+actual_gad <- Data_clean$GAD7_score_F4
+actual_isi <- Data_clean$ISI_score_F4
+
+# MAE calculation function
+calculate_mae <- function(actual, predicted) {
+  mean(abs(actual - predicted))
+}
+
+mae_phq <- calculate_mae(actual_phq, pred_phq)
+mae_gad <- calculate_mae(actual_gad, pred_gad)
+mae_isi <- calculate_mae(actual_isi, pred_isi)
+
+cat("\n--- Mean Absolute Errors (MAE) ---\n")
+cat("MAE for PHQ9 Model:", round(mae_phq, 3), "\n")
+cat("MAE for GAD7 Model:", round(mae_gad, 3), "\n")
+cat("MAE for ISI Model:", round(mae_isi, 3), "\n\n")
+
+```
+图表
+```{r}
+library(ggplot2)
+library(dplyr)
+library(broom) 
+
+tidy_phq_adj <- tidy(lm_phq_individual_impacts_adj, conf.int = TRUE) %>%
+  filter(term %in% c("COVID19_impact_familyhealth", "COVID19_impact_relationship", "COVID19_impact_studypractice")) %>%
+  mutate(Outcome = "PHQ-9 at F4")
+
+tidy_gad_adj <- tidy(lm_GAD7_individual_impacts_adj, conf.int = TRUE) %>%
+  filter(term %in% c("COVID19_impact_familyhealth", "COVID19_impact_relationship", "COVID19_impact_studypractice")) %>%
+  mutate(Outcome = "GAD-7 at F4")
+
+tidy_isi_adj <- tidy(lm_ISI_individual_impacts_adj, conf.int = TRUE) %>%
+  filter(term %in% c("COVID19_impact_familyhealth", "COVID19_impact_relationship", "COVID19_impact_studypractice")) %>%
+  mutate(Outcome = "ISI at F4")
+
+
+combined_coefs_adj <- bind_rows(tidy_phq_adj, tidy_gad_adj, tidy_isi_adj)
+
+
+combined_coefs_adj <- combined_coefs_adj %>%
+  mutate(Term = recode(term,
+                       `COVID19_impact_familyhealth` = "Impact on Family Health",
+                       `COVID19_impact_relationship` = "Impact on Relationships",
+                       `COVID19_impact_studypractice` = "Impact on Study Practice"
+                      ))
+
+
+ggplot(combined_coefs_adj, aes(x = estimate, y = Term, color = Outcome)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high),
+                 position = position_dodge(width = 0.5), height = 0.2) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  facet_wrap(~ Outcome, scales = "free_x", ncol = 1) + 
+  labs(title = "Adjusted Associations of Perceived COVID-19 Impacts with Mental Health Symptoms",
+       x = "Coefficient Estimate (Adjusted)",
+       y = "Perceived COVID-19 Impact Variable") +
+  scale_color_brewer(palette = "Set1") + # Or any other palette you prefer
+  theme_minimal(base_size = 10) +
+  theme(legend.position = "none", # Remove legend if colors are clear from facets
+        strip.text = element_text(face = "bold", size=9),
+        axis.text.y = element_text(size=8),
+        axis.title = element_text(size=9),
+        plot.title = element_text(size=11, hjust = 0.5))
+```
+
+
+特征重要性
+```{r}
+library(viridisLite)
+library(ggplot2)
+library(forcats)
+library(viridis)
+plot_feature_importance <- function(model_summary, model_title) {
+  # Extract coefficients, t-values, and p-values
+  coef_table <- as.data.frame(summary(model_summary)$coefficients)
+  colnames(coef_table) <- c("Estimate", "Std_Error", "t_value", "P_value")
+  coef_table$Variable <- rownames(coef_table)
+  
+  importance_df <- coef_table[coef_table$Variable != "(Intercept)", ]
+  
+  importance_df$Importance <- abs(importance_df$t_value)
+  
+  importance_df$Variable_Display <- gsub("COVID19_impact_", "Impact: ", importance_df$Variable)
+  importance_df$Variable_Display <- gsub("SexFemale", "Sex (Female vs Male)", importance_df$Variable_Display)
+  importance_df$Variable_Display <- gsub("Academic_YearYear 2", "Academic Year (Y2 vs Y1)", importance_df$Variable_Display)
+  importance_df$Variable_Display <- gsub("_BL", " (Baseline)", importance_df$Variable_Display)
+  importance_df$Variable_Display <- gsub("_", " ", importance_df$Variable_Display)
+  
+  p <- ggplot(importance_df, aes(x = fct_reorder(Variable_Display, Importance), y = Importance, fill = Variable_Display)) +
+    geom_col(show.legend = FALSE) +
+    coord_flip() +
+    scale_fill_viridis_d(option = "D") + 
+    labs(
+      title = paste("Feature Importance for", model_title),
+      x = "Features",
+      y = "Absolute t-value (Importance)"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)),
+      panel.grid.major.y = element_blank(), 
+      panel.grid.minor.x = element_blank()
+    )
+  
+  print(p)
+  return(p) 
+}
+
+
+cat("\n--- Feature Importance Plots ---\n")
+
+plot_phq_importance <- plot_feature_importance(lm_phq_individual_impacts_adj, "PHQ9 Score Model")
+plot_gad_importance <- plot_feature_importance(lm_GAD7_individual_impacts_adj, "GAD7 Score Model")
+plot_isi_importance <- plot_feature_importance(lm_ISI_individual_impacts_adj, "ISI Score Model")
+```
+
